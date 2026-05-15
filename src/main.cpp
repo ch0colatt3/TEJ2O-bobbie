@@ -1,5 +1,5 @@
 #include "main.h"
-
+ASSET(path_txt); // means path
 // --- Motors ---
 // Standard PROS motor groups. (Negative ports reverse the motor)
 MotorGroup leftMotors({1, 9});
@@ -28,6 +28,7 @@ OdomSensors sensors(nullptr, // vertical tracking wheel 1
 
 // --- PID Controllers ---
 // Placeholder values - you will need to tune these!
+// ControllerSettings(kP,kI,kD, windup, smallError, smallErrorTime, largeError, largeErrorTime, slew);
 ControllerSettings lateral_controller(10, 0, 3, 3, 1, 100, 3, 500, 20);
 ControllerSettings angular_controller(2, 0, 10, 3, 1, 100, 3, 500, 0);
 
@@ -76,6 +77,11 @@ void competition_initialize() {}
 
 void autonomous() {}
 
+void follow_path(){
+    chassis.setPose(0,0,0);
+    chassis.follow(path_txt, 10, 4000);
+    chassis.waitUntilDone();
+}
 /**
  * Runs the operator control code.
  */
@@ -106,11 +112,16 @@ void opcontrol() {
 
 
         chassis.curvature(throtle, turn);
+
+        
         // --- Metric Movement Test (~30cm) ---
         if (master.get_digital_new_press(DIGITAL_X)) {
-            chassis.setPose(0, 0, 0);
+         /*  chassis.setPose(0, 0, 0);
             chassis.moveToPoint(0, 11.81, 2000);
-            chassis.waitUntilDone();
+            chassis.waitUntilDone(); */ 
+            follow_path();
+            // chassis.moveToPoint(0, 24, 2000);
+            // chassis.turnToHeading(90, 2000);
         }
 
         //Intake control
