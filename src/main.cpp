@@ -29,8 +29,8 @@ OdomSensors sensors(nullptr, // vertical tracking wheel 1
 // --- PID Controllers ---
 // Placeholder values - you will need to tune these!
 // ControllerSettings(kP,kI,kD, windup, smallError, smallErrorTime, largeError, largeErrorTime, slew);
-ControllerSettings lateral_controller(10, 0, 3, 3, 1, 100, 3, 500, 20);
-ControllerSettings angular_controller(2, 0, 10, 3, 1, 100, 3, 500, 0);
+ControllerSettings lateral_controller(7, 0, 5, 3, 1, 100, 3, 500, 20);
+ControllerSettings angular_controller(6, 0, 9, 3, 1, 100, 3, 500, 0);
 
 // --- Initialize Chassis ---
 Chassis chassis(drivetrain, lateral_controller, angular_controller, sensors);
@@ -75,11 +75,13 @@ void disabled() {}
 
 void competition_initialize() {}
 
-void autonomous() {}
+void autonomous() {
+    
+}
 
 void follow_path(){
     chassis.setPose(0,0,0);
-    chassis.follow(path_txt, 10, 4000);
+    chassis.follow(path_txt, 10, 30000);
     chassis.waitUntilDone();
 }
 /**
