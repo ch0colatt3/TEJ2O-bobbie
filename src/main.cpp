@@ -59,7 +59,7 @@ ControllerSettings angular_controller(
 // --- Initialize Chassis ---
 Chassis chassis(drivetrain, lateral_controller, angular_controller, sensors);
 
-AIVision ai_sensor(3); // port 16
+AIVision ai_vision(3); // port 16
 
 
 
@@ -157,7 +157,7 @@ void opcontrol() {
             distance_sensor.get_object_velocity()
         );
         
-        auto objects = ai_sensor.get_all_objects();
+        auto objects = ai_vision.get_all_objects();
         if (objects.size()==0) {
             pros::lcd::set_text(1,"No Apriltags detected");
         } else {
