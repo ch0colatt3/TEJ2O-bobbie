@@ -16,7 +16,8 @@ Drivetrain drivetrain(&leftMotors, // left motor group
                       12.0, // track width (12 inches)
                       Omniwheel::NEW_4, // using new 4" omnis
                       200, // drivetrain rpm
-                      2); // horizontal drift (2 is standard for normal drive)
+                      2); // horizontal drift (2 is standard for normal drive) 
+
 
 // --- Odometry Sensors ---
 Imu imu(17); // port 17 
@@ -29,11 +30,40 @@ OdomSensors sensors(nullptr, // vertical tracking wheel 1
 // --- PID Controllers ---
 // Placeholder values - you will need to tune these!
 // ControllerSettings(kP,kI,kD, windup, smallError, smallErrorTime, largeError, largeErrorTime, slew);
-ControllerSettings lateral_controller(7, 0, 5, 3, 1, 100, 3, 500, 20);
-ControllerSettings angular_controller(6, 0, 9, 3, 1, 100, 3, 500, 0);
+/* ControllerSettings lateral_controller(7, 0, 5, 3, 1, 100, 3, 500, 20);
+ControllerSettings angular_controller(6, 0, 9, 3, 1, 100, 3, 500, 10); */
+ControllerSettings lateral_controller(
+    10,
+    0,
+    3,
+    3,
+    1,
+    100,
+    3,
+    500,
+    20
+);
+
+ControllerSettings angular_controller(
+    2,
+    0,
+    10,
+    3,
+    1,
+    100,
+    3,
+    500,
+    0
+);
 
 // --- Initialize Chassis ---
 Chassis chassis(drivetrain, lateral_controller, angular_controller, sensors);
+
+AIVision ai_sensor(3); // port 16
+
+
+
+Distance distance_sensor(14);
 
 
 /**
@@ -69,7 +99,13 @@ void initialize() {
 
     // Calibrate the chassis (calibrates the IMU and starts odometry)
     chassis.calibrate(); 
+
+    ai_vision.enable_detection_types(pros::AivisionModeType::tags);
+
+    
 }
+
+
 
 void disabled() {}
 
@@ -77,13 +113,17 @@ void competition_initialize() {}
 
 void autonomous() {
     
+    
 }
 
+
+
 void follow_path(){
-    chassis.setPose(0,0,0);
-    chassis.follow(path_txt, 10, 30000);
+    chassis.setPose(0,0,0);  // changws
+    chassis.follow(path_txt, 9, 30000);      //changel
     chassis.waitUntilDone();
-}
+} 
+
 /**
  * Runs the operator control code.
  */
@@ -91,7 +131,7 @@ void opcontrol() {
     // Thanks to PROS_USE_SIMPLE_NAMES, we can just say CONTROLLER_MASTER
     Controller master(CONTROLLER_MASTER);
     //speed limits
-    const int INTAKE_SPEED = 127;
+    const int INTAKE_SPEED = 130;
     const int ARM_UP_SPEED = 100;
     const int ARM_DOWN_SPEED = 70;
     const int TRAY_OUT_SPEED = 50;
@@ -108,8 +148,50 @@ void opcontrol() {
    
 
     while (true) { //loop
+
+        pros::lcd::print(1, "Dist: %d mm | Size: %d",
+            distance_sensor.get(), 
+            distance_sensor.get_object_size()
+        );
+        pros::lcd::print(2, "Speed: %.2f m/s",
+            distance_sensor.get_object_velocity()
+        );
         
-        int throtle = master.get_analog(ANALOG_LEFT_Y);
+        auto objects = ai_sensor.get_all_objects();
+        if (objects.size()==0) {
+            pros::lcd::set_text(1,"No Apriltags detected");
+        } else {
+            for (auto &obj : objects) {
+                  double x0 = obj.object.tag.x0; // Bottom-left
+                double y0 = obj.object.tag.y0; 
+                double x1 = obj.object.tag.x1; // Bottom-right
+                double y1 = obj.object.tag.y1;
+                double x3 = obj.object.tag.x3; // Top-left
+                double y3 = obj.object.tag.y3;
+                
+                // Width: Euclidean distance between bottom-left (0) and bottom-right (1)
+                double width = std::sqrt(std::pow(x1 - x0, 2) + std::pow(y1 - y0, 2));
+                
+                // Height: Euclidean distance between bottom-left (0) and top-left (3)
+                double height = std::sqrt(std::pow(x3 - x0, 2) + std::pow(y3 - y0, 2));
+                
+                // Angle: Slope of the bottom edge (0 to 1)
+                double angle = std::atan2(y1 - y0, x1 - x0) * 180.0 / M_PI;
+
+                pros::lcd::print(1, "ID:%d X:%.1f Y:%.1f W:%.1f H:%.1f A:%.1f",
+                    obj.id,
+                    x3,
+                    y3,
+                    width,
+                    height,
+                    angle
+                );
+            }
+            
+        }
+    
+
+       /* int throtle = master.get_analog(ANALOG_LEFT_Y);
         int turn = master.get_analog(ANALOG_RIGHT_X);
 
 
@@ -121,12 +203,12 @@ void opcontrol() {
          /*  chassis.setPose(0, 0, 0);
             chassis.moveToPoint(0, 11.81, 2000);
             chassis.waitUntilDone(); */ 
-            follow_path();
+           /*  follow_path();
             // chassis.moveToPoint(0, 24, 2000);
             // chassis.turnToHeading(90, 2000);
         }
 
-        //Intake control
+       /* //Intake control
         if (master.get_digital(DIGITAL_R2)) { 
             intakeMotors.move(INTAKE_SPEED);
         } else if (master.get_digital(DIGITAL_L2)) {
@@ -135,11 +217,11 @@ void opcontrol() {
             intakeMotors.brake();
         }
 
-        //Get Motor Positions 
+       /* //Get Motor Positions 
         double currentLiftPos = intakeLiftMotor.get_position();
         double currentTrayPos = trayLiftMotor.get_position();
 
-        //Lift Arm
+       /* //Lift Arm
         if (master.get_digital(DIGITAL_R1) && currentLiftPos < LIFT_MAX_POS) { //arm up
             intakeLiftMotor.move(ARM_UP_SPEED);
         } else if (master.get_digital(DIGITAL_L1) && currentLiftPos > 0) { //arm down
@@ -148,7 +230,7 @@ void opcontrol() {
             intakeLiftMotor.brake();
         }
 
-        //Tray motor
+       /* //Tray motor
         if (master.get_digital(DIGITAL_UP) && currentTrayPos < TRAY_MAX_POS) { 
             trayLiftMotor.move(TRAY_OUT_SPEED);
         } else if (master.get_digital(DIGITAL_DOWN) && currentTrayPos > 0) { 
@@ -156,7 +238,10 @@ void opcontrol() {
         } else {
             trayLiftMotor.brake();
         }
+        */ 
         
-        delay(10); 
+        delay (100);
     }
+        
+    
 }
